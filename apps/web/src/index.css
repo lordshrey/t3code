@@ -2649,26 +2649,3 @@ code {
 .messages-timeline-scroll:focus-visible {
   outline: none;
 }
-
-@theme {
-  --color-company-page: #1d282e;
-  --color-company-card: #202d34;
-  --color-company-border: #3b484e;
-  --color-company-divider: #455156;
-  --color-company-muted: #a2b0b6;
-  --color-company-soft: #c2cbd0;
-  --color-company-text: #eef0f0;
-  --color-company-heading: #e3b8a2;
-  --color-company-link: #8cbff4;
-  --color-company-hover: #2a3b44;
-  --color-company-selected: #506477;
-  --color-company-backlog: #77758e;
-  --color-company-running: #6e9abd;
-  --color-company-attention: #c6915b;
-  --color-company-review: #a582b7;
-  --color-company-done: #7da687;
-  --color-company-lane: #2a363d;
-  --color-company-lane-hover: #33434b;
-  --color-company-warning: #d6b17d;
-  --tracking-company-title: -0.045em;
-}

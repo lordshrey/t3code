@@ -1,3 +1,4 @@
+import { CompanyNavigation } from "./company-os/CompanyNavigation";
 import { attachSidebarTree } from "../lib/sidebarTree";
 import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
 import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
@@ -2969,6 +2970,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         className="min-h-full"
         fixedHeader={
           <SidebarGroup className="z-[1]">
+            <CompanyNavigation />
             <SidebarThreadHeader
               hasProjects={projectGroups.length > 0}
               projectScope={

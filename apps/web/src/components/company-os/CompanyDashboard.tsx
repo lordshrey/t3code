@@ -2,17 +2,20 @@ import { scopedProjectKey, scopeProjectRef } from "@t3tools/client-runtime/envir
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import * as Schema from "effect/Schema";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { companyTaskStage } from "./CompanyDashboard.logic";
-import { openCommandPalette } from "../../commandPaletteBus";
 import { useNewThreadHandler } from "../../hooks/useHandleNewThread";
 import { useProjects, useVisibleThreadShells } from "../../state/entities";
 import { workspaceAreaProps } from "../../lib/workspaceFocus";
 import { Button } from "../ui/button";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { SidebarInset } from "../ui/sidebar";
+import { WorkspacePageHeader } from "../WorkspacePageHeader";
+import { isElectron } from "../../env";
+import { CompanyTaskBoard, companyTaskStages } from "./CompanyTaskBoard";
 
 const productSelectionSchema = Schema.NullOr(Schema.String);
 
@@ -20,7 +23,7 @@ const pages = [
   ["home", "Home"],
   ["messages", "Message Board"],
   ["references", "Design References"],
-  ["tasks", "Project Tasks"],
+  ["tasks", "Task board"],
   ["assets", "Project Assets & Proofs"],
   ["milestones", "Deadlines & Milestones"],
   ["workflow", "Workflow"],
@@ -28,27 +31,21 @@ const pages = [
   ["checkins", "Automatic Check-ins"],
   ["activity", "Latest Activity"],
 ] as const;
-const stages = [
-  ["backlog", "Backlog", "bg-company-backlog"],
-  ["running", "In progress", "bg-company-running"],
-  ["attention", "Needs attention", "bg-company-attention"],
-  ["review", "Review", "bg-company-review"],
-  ["done", "Done", "bg-company-done"],
-] as const;
+const stages = companyTaskStages.map(({ id, title, color }) => [id, title, color] as const);
 
 function TaskLink({ thread, children }: { thread: EnvironmentThreadShell; children?: ReactNode }) {
   return (
     <Link
       to="/$environmentId/$threadId"
       params={{ environmentId: thread.environmentId, threadId: thread.id }}
-      className="block rounded-md px-3 py-2 text-left transition-colors hover:bg-company-hover focus-visible:outline-2 focus-visible:outline-company-link"
+      className="block rounded-md px-3 py-2 text-left transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
     >
       {children ?? (
         <>
-          <strong className="block truncate text-sm font-semibold text-company-text">
+          <strong className="block truncate text-sm font-semibold text-foreground">
             {thread.title}
           </strong>
-          <span className="mt-1 block truncate text-2xs text-company-muted">
+          <span className="mt-1 block truncate text-2xs text-muted-foreground">
             {thread.source.latestVisibleMessage?.text || thread.branch || thread.providerInstanceId}
           </span>
         </>
@@ -57,7 +54,7 @@ function TaskLink({ thread, children }: { thread: EnvironmentThreadShell; childr
   );
 }
 function EmptyCard({ children }: { children: ReactNode }) {
-  return <p className="p-3 text-sm leading-relaxed text-company-muted">{children}</p>;
+  return <p className="p-3 text-sm leading-relaxed text-muted-foreground">{children}</p>;
 }
 
 function Calendar() {
@@ -71,7 +68,7 @@ function Calendar() {
       </h3>
       <div className="grid grid-cols-7 gap-y-2 text-center text-3xs">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <span key={day} className="text-company-muted">
+          <span key={day} className="text-muted-foreground">
             {day}
           </span>
         ))}
@@ -83,8 +80,8 @@ function Calendar() {
             key={index}
             className={
               index + 1 === now.getDate()
-                ? "rounded bg-company-selected py-0.5 text-white"
-                : "py-0.5 text-company-soft"
+                ? "rounded bg-primary py-0.5 text-white"
+                : "py-0.5 text-secondary-label"
             }
           >
             {index + 1}
@@ -137,7 +134,8 @@ export function CompanyDashboard({
   const checkins = messages.filter((thread) => thread.latestRun?.status === "completed");
   const proofs = threads.flatMap((thread) => thread.pullRequests.map((pr) => ({ thread, pr })));
   const branches = threads.filter((thread) => thread.branch || thread.worktreePath);
-  const selectedPage = pages.find(([id]) => id === page)?.[0] ?? "home";
+  const selectedPage =
+    page === "workflow" ? "tasks" : (pages.find(([id]) => id === page)?.[0] ?? "home");
   const items = projects.map((project) => ({
     value: scopedProjectKey(scopeProjectRef(project.environmentId, project.id)),
     label: project.title,
@@ -163,15 +161,15 @@ export function CompanyDashboard({
         return <EmptyCard>Design references can be attached to a task conversation.</EmptyCard>;
       case "tasks":
         return threads.length ? (
-          threads.slice(0, selectedPage === "home" ? 8 : undefined).map((thread) => (
+          threads.slice(0, 8).map((thread) => (
             <TaskLink key={thread.id} thread={thread}>
               <span className="flex items-center gap-2">
-                <span className="text-company-muted">
+                <span className="text-muted-foreground">
                   {companyTaskStage(thread) === "done" ? "☑" : "☐"}
                 </span>
                 <strong className="truncate text-xs font-medium">{thread.title}</strong>
               </span>
-              <small className="ml-5 mt-1 block text-3xs text-company-muted">
+              <small className="ml-5 mt-1 block text-3xs text-muted-foreground">
                 {stages.find(([id]) => id === companyTaskStage(thread))?.[1]}
               </small>
             </TaskLink>
@@ -185,7 +183,7 @@ export function CompanyDashboard({
             {proofs.map(({ thread, pr }) => (
               <a
                 key={pr.url}
-                className="block px-3 py-2 text-xs text-company-link hover:underline"
+                className="block px-3 py-2 text-xs text-primary hover:underline"
                 href={pr.url}
                 target="_blank"
                 rel="noreferrer"
@@ -196,7 +194,7 @@ export function CompanyDashboard({
             {branches.map((thread) => (
               <TaskLink key={thread.id} thread={thread}>
                 <strong className="block truncate text-xs">{thread.branch}</strong>
-                <small className="mt-1 block truncate text-3xs text-company-muted">
+                <small className="mt-1 block truncate text-3xs text-muted-foreground">
                   {thread.worktreePath || current.workspaceRoot}
                 </small>
               </TaskLink>
@@ -210,32 +208,29 @@ export function CompanyDashboard({
         return <Calendar />;
       case "workflow":
         return (
-          <div className="flex h-full min-h-48 gap-1 p-3">
-            {stages.map(([stage, title, color]) => {
-              const matching = threads.filter((thread) => companyTaskStage(thread) === stage);
-              return (
-                <Link
-                  key={stage}
-                  to="/"
-                  search={{ product: key, page: "tasks" }}
-                  className="flex min-w-0 flex-1 flex-col rounded bg-company-lane text-center hover:bg-company-lane-hover"
-                >
-                  <span className={"h-1 w-full rounded-t " + color} />
-                  <small className="mt-2 text-3xs text-company-muted">{matching.length}</small>
-                  <strong className="mx-auto mt-2 text-3xs font-medium tracking-wider uppercase [writing-mode:vertical-rl]">
-                    {title}
-                  </strong>
-                </Link>
-              );
-            })}
+          <div className="space-y-1 px-1">
+            {companyTaskStages.map(({ id, title, icon: Icon, color }) => (
+              <Link
+                key={id}
+                to="/"
+                search={{ product: key, page: "tasks" }}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-xs hover:bg-accent"
+              >
+                <Icon className={"size-3.5 " + color} />
+                <span>{title}</span>
+                <span className="ml-auto tabular-nums text-muted-foreground">
+                  {threads.filter((thread) => companyTaskStage(thread) === id).length}
+                </span>
+              </Link>
+            ))}
           </div>
         );
       case "chat":
         return requests.length ? (
           requests.map((thread) => (
             <TaskLink key={thread.id} thread={thread}>
-              <strong className="text-xs text-company-warning">{thread.title}</strong>
-              <p className="mt-1 text-2xs text-company-soft">
+              <strong className="text-xs text-warning">{thread.title}</strong>
+              <p className="mt-1 text-2xs text-secondary-label">
                 {thread.hasPendingApprovals
                   ? "Waiting for your approval"
                   : thread.hasPendingUserInput
@@ -252,8 +247,11 @@ export function CompanyDashboard({
           checkins.slice(0, 4).map((thread) => (
             <TaskLink key={thread.id} thread={thread}>
               <strong className="block truncate text-xs">{thread.title}</strong>
-              <p className="mt-1 line-clamp-3 text-2xs leading-relaxed text-company-soft">
-                {thread.source.latestVisibleMessage?.text}
+              <p className="mt-1 line-clamp-3 text-2xs leading-relaxed text-secondary-label">
+                {thread.source.latestVisibleMessage?.text ||
+                  (thread.latestRun?.completedAt
+                    ? "Finished " + new Date(thread.latestRun.completedAt).toLocaleString()
+                    : "Agent turn completed")}
               </p>
             </TaskLink>
           ))
@@ -264,12 +262,10 @@ export function CompanyDashboard({
         return threads.length ? (
           threads.slice(0, 8).map((thread) => (
             <TaskLink key={thread.id} thread={thread}>
-              <time className="text-3xs text-company-muted">
+              <time className="text-3xs text-muted-foreground">
                 {new Date(thread.updatedAt).toLocaleString()}
               </time>
-              <strong className="mt-1 block truncate text-xs text-company-link">
-                {thread.title}
-              </strong>
+              <strong className="mt-1 block truncate text-xs text-primary">{thread.title}</strong>
             </TaskLink>
           ))
         ) : (
@@ -285,13 +281,16 @@ export function CompanyDashboard({
       role="main"
       className="h-dvh min-h-0 overflow-auto"
     >
-      <div className="min-h-full bg-company-page text-company-text">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-company-divider px-5 py-3 lg:px-9">
-          <div className="flex items-end gap-3">
-            <div className="w-44">
+      <div className="min-h-full bg-background text-foreground">
+        <WorkspacePageHeader
+          electron={isElectron}
+          className="justify-between gap-4 border-b border-border"
+        >
+          <div className="flex items-end gap-2 sm:gap-3">
+            <div className="w-28 sm:w-44">
               <label
                 htmlFor="company-product"
-                className="mb-1 block text-3xs font-semibold text-company-muted"
+                className="mb-1 block text-3xs font-semibold text-muted-foreground"
               >
                 Product
               </label>
@@ -305,7 +304,7 @@ export function CompanyDashboard({
                   }
                 }}
               >
-                <SelectTrigger id="company-product" size="sm">
+                <SelectTrigger id="company-product" size="sm" className="min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopup>
@@ -317,54 +316,52 @@ export function CompanyDashboard({
                 </SelectPopup>
               </Select>
             </div>
-            <div className="w-48">
+            <div className="w-24 sm:w-44">
               <label
                 htmlFor="company-page"
-                className="mb-1 block text-3xs font-semibold text-company-muted"
+                className="mb-1 block text-3xs font-semibold text-muted-foreground"
               >
                 Pages
               </label>
               <Select
-                items={pages.map(([value, label]) => ({ value, label }))}
+                items={pages
+                  .filter(([value]) => value !== "workflow")
+                  .map(([value, label]) => ({ value, label }))}
                 value={selectedPage}
                 onValueChange={(value) => {
                   if (value) changePage(value);
                 }}
               >
-                <SelectTrigger id="company-page" size="sm">
+                <SelectTrigger id="company-page" size="sm" className="min-w-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopup>
-                  {pages.map(([value, title]) => (
-                    <SelectItem key={value} value={value}>
-                      {title}
-                    </SelectItem>
-                  ))}
+                  {pages
+                    .filter(([value]) => value !== "workflow")
+                    .map(([value, title]) => (
+                      <SelectItem key={value} value={value}>
+                        {title}
+                      </SelectItem>
+                    ))}
                 </SelectPopup>
               </Select>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => openCommandPalette({ open: "add-project" })}
-            >
-              Add project
-            </Button>
-            <Button size="sm" onClick={() => void createTask()}>
-              + New task
+            <Button size="sm" aria-label="New task" onClick={() => void createTask()}>
+              <PlusIcon />
+              <span className="hidden sm:inline">New task</span>
             </Button>
           </div>
-        </header>
-        <div className="px-5 pt-7 pb-12 lg:px-9">
+        </WorkspacePageHeader>
+        <div className="px-5 pt-6 pb-8 lg:px-7">
           <header className="mb-6">
-            <h1 className="text-4xl leading-tight font-bold tracking-company-title">
+            <h1 className="text-2xl leading-tight font-semibold tracking-tight">
               {selectedPage === "home"
                 ? current.title
                 : pages.find(([id]) => id === selectedPage)?.[1]}
             </h1>
-            <div className="mt-2 flex items-center gap-2 text-xs text-company-muted">
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               {selectedPage === "home" ? (
                 <>
                   <span>
@@ -375,7 +372,7 @@ export function CompanyDashboard({
                   <Link
                     to="/"
                     search={{ product: key, page: "activity" }}
-                    className="text-company-link hover:underline"
+                    className="text-primary hover:underline"
                   >
                     View activity
                   </Link>
@@ -384,7 +381,7 @@ export function CompanyDashboard({
                 <Link
                   to="/"
                   search={{ product: key, page: "home" }}
-                  className="text-company-link hover:underline"
+                  className="text-primary hover:underline"
                 >
                   ‹ {current.title} home
                 </Link>
@@ -392,7 +389,7 @@ export function CompanyDashboard({
             </div>
           </header>
           {error ? (
-            <p role="alert" className="mb-4 text-sm text-company-warning">
+            <p role="alert" className="mb-4 text-sm text-warning">
               {error}
             </p>
           ) : null}
@@ -401,22 +398,25 @@ export function CompanyDashboard({
               {pages
                 .filter(([id]) => id !== "home")
                 .map(([section, title]) => (
-                  <section key={section} className="flex min-w-0 flex-col">
+                  <section
+                    key={section}
+                    className="flex min-w-0 flex-col rounded-lg border border-border bg-card"
+                  >
                     <Link
                       to="/"
                       search={{ product: key, page: section }}
-                      className="mb-1.5 text-base font-semibold text-company-heading hover:underline"
+                      className="px-4 pt-4 pb-2 text-sm font-medium text-foreground hover:text-primary"
                     >
                       {title}
                     </Link>
-                    <div className="h-[clamp(216px,24dvh,290px)] min-w-0 overflow-auto rounded-lg border border-company-border bg-company-card">
-                      {content(section)}
-                    </div>
+                    <div className="h-48 min-w-0 overflow-auto px-1 pb-2">{content(section)}</div>
                   </section>
                 ))}
             </div>
+          ) : selectedPage === "tasks" ? (
+            <CompanyTaskBoard threads={threads} />
           ) : (
-            <section className="min-h-80 overflow-auto rounded-lg border border-company-border bg-company-card">
+            <section className="min-h-80 overflow-auto rounded-lg border border-border bg-card">
               {content(selectedPage)}
             </section>
           )}
