@@ -85,7 +85,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import { type AnyRouter, useRouter } from "@tanstack/react-router";
+import { type AnyRouter, useLocation, useRouter } from "@tanstack/react-router";
 
 import {
   isAtomCommandInterrupted,
@@ -904,6 +904,23 @@ function readRouteThreadKey(router: AnyRouter): string | null {
 }
 
 export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  if (pathname !== "/") return <ThreadSidebar routeReveal={routeReveal} />;
+
+  return (
+    <>
+      <SidebarChromeHeader isElectron={isElectron} />
+      <SidebarContent>
+        <SidebarGroup>
+          <CompanyNavigation />
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarChromeFooter />
+    </>
+  );
+}
+
+function ThreadSidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
   const {
     projects,
     serverConfigs,

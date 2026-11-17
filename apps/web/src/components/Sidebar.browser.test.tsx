@@ -113,6 +113,7 @@ describe("sidebar header new thread", () => {
       <SidebarProvider>
         <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
       </SidebarProvider>,
+      { router: "/local/thread-0" },
     );
 
     await userEvent.click(screen.getByRole("button", { name: "New thread", exact: true }), {
@@ -177,6 +178,7 @@ describe("sidebar render isolation", () => {
       <SidebarProvider>
         <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
       </SidebarProvider>,
+      { router: "/local/thread-0" },
     );
     await expect.element(screen.getByText("Thread 4").first()).toBeInTheDocument();
     const rowRenders = () => vi.mocked(SortableThreadRow).mock.calls.length;
@@ -249,7 +251,7 @@ describe("sidebar thread rename", () => {
           <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
         </SidebarProvider>
       );
-      await using screen = await render(tree());
+      await using screen = await render(tree(), { router: "/local/thread-0" });
       await userEvent.dblClick(screen.getByText("Fix the login redirect").first());
       const input = screen.getByRole("textbox", { name: "Thread title" });
       await expect.element(input).toHaveValue("Fix the login redirect");
@@ -290,6 +292,7 @@ describe("sidebar thread menu", () => {
       <SidebarProvider>
         <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
       </SidebarProvider>,
+      { router: "/local/thread-0" },
     );
     const row = screen.getByText("Thread 0").first();
     await expect.element(row).toBeInTheDocument();
@@ -369,6 +372,7 @@ describe("sidebar settled pagination", () => {
       >
         <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
       </SidebarProvider>,
+      { router: "/local/thread-100" },
     );
     const shelf = screen.container.querySelector<HTMLElement>(
       '[data-sidebar-row="shelf:settled"]',
